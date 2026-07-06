@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+data/raw/
+data/processed/
+data/chroma_db/
+data/emails/
+data/images/
+.env

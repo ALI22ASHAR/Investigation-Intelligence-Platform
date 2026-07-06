@@ -1,0 +1,60 @@
+# docker-compose.yml
+#
+# Purpose: define and run multiple containers together as one system,
+# with one command: `docker compose up`.
+#
+# This file lives in the PROJECT ROOT (not inside docker/), since
+# Docker Compose needs to see the whole project to know what to build.
+
+services:
+  # Each top-level key under "services:" defines one container.
+
+  backend:
+    build:
+      context: .                          # build context = project root (so COPY rag/, embeddings/, etc. can find those folders)
+      dockerfile: docker/backend.Dockerfile
+    ports:
+      # "8000:8000" means: forward port 8000 on YOUR actual Windows
+      # machine to port 8000 INSIDE the container. Without this, the
+      # container's server would be running but completely unreachable
+      # from your browser/curl on the host.
+      - "8000:8000"
+    volumes:
+      # Mount your existing data/ folder INTO the container, at the
+      # same relative path the code expects. Without this, the
+      # container would have its OWN empty data/ folder, and your
+      # already-indexed Chroma vectors + raw/processed files would be
+      # invisible to it.
+      #
+      # Format is "host_path:container_path" -- changes on either side
+      # are reflected on both, since it's the same underlying folder,
+      # not a copy.
+      - ./data:/app/data
+    environment:
+      # These override whatever's in your .env file, specifically for
+      # values that need to be DIFFERENT inside a container. Postgres
+      # and Ollama are running on your actual Windows machine (the
+      # "host"), NOT inside this container -- so "localhost" from
+      # INSIDE the container would incorrectly mean "this container
+      # itself", not your Windows machine.
+      #
+      # host.docker.internal is Docker Desktop's special DNS name that
+      # means "reach back out to the host machine" -- this is the key
+      # piece of networking knowledge that makes hybrid
+      # (containerized-app + host-services) setups like ours work.
+      - DB_HOST=host.docker.internal
+      - OLLAMA_URL=http://host.docker.internal:11434/api/chat
+    env_file:
+      - .env   # still loads everything else (API tokens, DB password, etc.) normally
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    ports:
+      - "5173:5173"
+    depends_on:
+      # Tells Docker to start "backend" before "frontend" -- doesn't
+      # guarantee the backend is FULLY ready (just that its container
+      # has started), but it's a reasonable ordering guarantee for now.
+      - backend

@@ -1,0 +1,252 @@
+/* frontend/src/App.css
+   Design intent: a calm, serious "case file" register -- dark charcoal
+   ground, a warm archival-paper accent for anything sourced from real
+   documents, monospace for citation tags (like evidence exhibit
+   numbers). Nothing decorative that isn't also meaningful.
+*/
+
+:root {
+  --ink: #e8e6e1;
+  --ground: #16171a;
+  --panel: #1f2124;
+  --accent: #c9a15a;      /* muted brass/archival tone, not a generic brand color */
+  --muted: #8b8d92;
+  --border: #2c2e32;
+  --error: #d9705a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "Georgia", "Iowan Old Style", serif; /* legible for dense legal text */
+}
+
+.app-shell {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 64px 24px 80px;
+}
+
+.app-header {
+  margin-bottom: 40px;
+}
+
+.app-eyebrow {
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.app-header h1 {
+  font-size: 40px;
+  margin: 12px 0 8px;
+  font-weight: 500;
+}
+
+.app-subtitle {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.5;
+  max-width: 52ch;
+}
+
+.query-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 32px;
+}
+
+.query-input {
+  flex: 1;
+  padding: 14px 16px;
+  font-size: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--ink);
+  font-family: inherit;
+}
+
+.query-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.query-button {
+  padding: 14px 22px;
+  font-size: 15px;
+  background: var(--accent);
+  color: #1a1a1a;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.query-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.error-box {
+  background: rgba(217, 112, 90, 0.12);
+  border: 1px solid var(--error);
+  color: var(--error);
+  padding: 14px 16px;
+  border-radius: 4px;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+}
+
+.section-label {
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+  margin: 32px 0 16px;
+}
+
+.answer-text {
+  font-size: 17px;
+  line-height: 1.7;
+  white-space: pre-wrap; /* preserves paragraph breaks the model generates */
+}
+
+.source-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.source-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.source-tag {
+  font-family: "Courier New", monospace;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.source-title {
+  flex: 1;
+}
+
+.source-link {
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.source-link:hover {
+  color: var(--accent);
+}
+
+/* --- v2 additions: conversation history, source cards, entity chips --- */
+
+.conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.turn {
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.turn:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.turn-question {
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.turn-question::before {
+  content: "Q  ";
+  color: var(--muted);
+}
+
+.source-card {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.source-card-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.source-card-header:hover {
+  background: rgba(201, 161, 90, 0.06);
+}
+
+.source-toggle {
+  margin-left: auto;
+  color: var(--muted);
+  font-family: "Courier New", monospace;
+  font-size: 16px;
+}
+
+.source-card-body {
+  padding: 0 14px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.source-chunk-preview {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+  font-style: italic;
+  margin: 14px 0;
+}
+
+.entity-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.entity-chip {
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  padding: 3px 10px;
+  border: 1px solid var(--accent);
+  border-radius: 100px;
+  color: var(--accent);
+}
