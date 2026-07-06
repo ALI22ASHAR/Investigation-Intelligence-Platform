@@ -13,7 +13,59 @@
 import { useState, useRef, useEffect } from "react";
 import "./App.css";
 
-const STORAGE_KEY = "ask-the-record.threads.v1";
+const LIVE_STORAGE_KEY = "ask-the-record.threads.v1";
+const DEMO_STORAGE_KEY = "ask-the-record.demo-threads.v1";
+const DEMO_MODE_KEY = "ask-the-record.demo-mode.v1";
+
+const DEMO_HISTORY = [
+  {
+    question: "How many cases are indexed?",
+    answer: "There are 12 documents currently indexed in the system.",
+    sources: [
+      {
+        doc_id: "demo-1",
+        title: "Demo Case Index",
+        source_url: null,
+        distance: 0.08,
+        chunk_preview:
+          "This demo workspace includes 12 indexed documents across multiple court records and supporting materials.",
+        people_mentioned: ["Joseph J. Epstein", "Anna Soler-Epstein"],
+      },
+    ],
+  },
+  {
+    question: "Who are the parties involved?",
+    answer:
+      "In the demo case, the primary parties are Joseph J. Epstein and Anna Soler-Epstein.",
+    sources: [
+      {
+        doc_id: "demo-2",
+        title: "Demo Parties Summary",
+        source_url: null,
+        distance: 0.12,
+        chunk_preview:
+          "The materials reference Joseph J. Epstein as the father and Anna Soler-Epstein as the mother/appellant.",
+        people_mentioned: ["Joseph J. Epstein", "Anna Soler-Epstein"],
+      },
+    ],
+  },
+  {
+    question: "What was the court's ruling?",
+    answer:
+      "For the demo walkthrough, the court discussion centers on custody-related proceedings and appellate review. The full answer depends on the source record you open in the source drawer.",
+    sources: [
+      {
+        doc_id: "demo-3",
+        title: "Demo Ruling Summary",
+        source_url: null,
+        distance: 0.15,
+        chunk_preview:
+          "The demo record references custody proceedings, the parties' arguments, and the court's decision path.",
+        people_mentioned: ["Ursula A. Gangemi"],
+      },
+    ],
+  },
+];
 
 const SUGGESTED_QUESTIONS = [
   "How many cases are indexed?",
@@ -27,22 +79,56 @@ function makeThread() {
   return { id: crypto.randomUUID(), title: null, history: [] };
 }
 
-function loadSavedState() {
+function getEmptyDemoThread() {
+  return {
+    id: crypto.randomUUID(),
+    title: "Demo investigation",
+    history: [],
+  };
+}
+
+function getDemoReply(question) {
+  const normalized = question.toLowerCase();
+  const matched = DEMO_HISTORY.find((entry) =>
+    normalized.includes(entry.question.toLowerCase().replace("?", ""))
+  );
+
+  if (matched) return matched;
+
+  return {
+    question,
+    answer:
+      "Demo mode is active. Try questions like 'How many cases are indexed?', 'Who are the parties involved?', or 'What was the court's ruling?'",
+    sources: [
+      {
+        doc_id: "demo-help",
+        title: "Demo Guide",
+        source_url: null,
+        distance: 0.2,
+        chunk_preview:
+          "Demo mode shows how the product works using example source-backed answers and citations.",
+        people_mentioned: [],
+      },
+    ],
+  };
+}
+
+function loadThreadState(storageKey, createFallbackThread) {
   if (typeof window === "undefined") {
-    const thread = makeThread();
+    const thread = createFallbackThread();
     return { threads: [thread], activeThreadId: thread.id };
   }
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(storageKey);
     if (!raw) {
-      const thread = makeThread();
+      const thread = createFallbackThread();
       return { threads: [thread], activeThreadId: thread.id };
     }
 
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed.threads) || parsed.threads.length === 0) {
-      const thread = makeThread();
+      const thread = createFallbackThread();
       return { threads: [thread], activeThreadId: thread.id };
     }
 
@@ -53,9 +139,17 @@ function loadSavedState() {
 
     return { threads: parsed.threads, activeThreadId };
   } catch {
-    const thread = makeThread();
+    const thread = createFallbackThread();
     return { threads: [thread], activeThreadId: thread.id };
   }
+}
+
+function loadSavedState() {
+  return loadThreadState(LIVE_STORAGE_KEY, makeThread);
+}
+
+function loadSavedDemoState() {
+  return loadThreadState(DEMO_STORAGE_KEY, getEmptyDemoThread);
 }
 
 function App() {
@@ -64,6 +158,10 @@ function App() {
   );
   const [threads, setThreads] = useState(initialThreads);
   const [activeThreadId, setActiveThreadId] = useState(initialActiveThreadId);
+  const [demoMode, setDemoMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(DEMO_MODE_KEY) === "true";
+  });
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -124,18 +222,38 @@ function App() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ threads, activeThreadId })
-    );
-  }, [threads, activeThreadId]);
+    const storageKey = demoMode ? DEMO_STORAGE_KEY : LIVE_STORAGE_KEY;
+    window.localStorage.setItem(storageKey, JSON.stringify({ threads, activeThreadId }));
+  }, [threads, activeThreadId, demoMode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(DEMO_MODE_KEY, String(demoMode));
+  }, [demoMode]);
 
   async function sendQuestion(text) {
-    if (!text.trim() || !backendReady) return;
+    if (!text.trim() || (!backendReady && !demoMode)) return;
 
     setQuestion("");
     setLoading(true);
     setError(null);
+
+    if (demoMode) {
+      const demoReply = getDemoReply(text);
+      setThreads((prev) =>
+        prev.map((t) =>
+          t.id === activeThreadId
+            ? {
+                ...t,
+                title: t.title ?? (text.length > 40 ? text.slice(0, 40) + "…" : text),
+                history: [...t.history, { question: text, answer: demoReply.answer, sources: demoReply.sources }],
+              }
+            : t
+        )
+      );
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch(`${BACKEND_URL}/ask`, {
@@ -181,6 +299,25 @@ function App() {
     setError(null);
   }
 
+  function startDemo() {
+    const savedDemo = loadSavedDemoState();
+    const fresh = savedDemo.threads.length > 0 ? savedDemo.threads[0] : getEmptyDemoThread();
+    setDemoMode(true);
+    setThreads(savedDemo.threads.length > 0 ? savedDemo.threads : [fresh]);
+    setActiveThreadId(savedDemo.activeThreadId ?? fresh.id);
+    setQuestion("");
+    setError(null);
+    setLoading(false);
+  }
+
+  function exitDemo() {
+    setDemoMode(false);
+    setError(null);
+    const liveState = loadSavedState();
+    setThreads(liveState.threads);
+    setActiveThreadId(liveState.activeThreadId);
+  }
+
   function toggleSource(turnIndex, sourceIndex) {
     const key = `${turnIndex}-${sourceIndex}`;
     setExpandedSource(expandedSource === key ? null : key);
@@ -200,6 +337,10 @@ function App() {
 
         <button className="new-thread-button" onClick={startNewThread}>
           + New investigation
+        </button>
+
+        <button className={`demo-button ${demoMode ? "demo-button-active" : ""}`} onClick={demoMode ? exitDemo : startDemo}>
+          {demoMode ? "Exit demo mode" : "Try demo mode"}
         </button>
 
         <div className="thread-list-label">Recent threads</div>
@@ -226,6 +367,7 @@ function App() {
         <header className="app-header">
           <div>
             <div className="app-title">Case Record Assistant</div>
+            {demoMode && <div className="demo-pill">Demo mode enabled</div>}
           </div>
           <span className="header-pill">answers cite source documents</span>
         </header>
@@ -330,7 +472,7 @@ function App() {
         </div>
 
         <div className="input-area">
-          {!backendReady && (
+          {!backendReady && !demoMode && (
             <div className="connecting-banner">
               <span className="typing-dot" />
               <span className="typing-dot" />
