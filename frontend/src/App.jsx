@@ -328,7 +328,7 @@ function App() {
       {/* --- Sidebar --- */}
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <div className="brand-badge">R</div>
+          <div className="brand-badge">IIP</div>
           <div>
             <div className="brand-title">Ask the Record</div>
             <div className="brand-subtitle">Investigation Intelligence</div>
