@@ -27,14 +27,6 @@ function makeThread() {
   return { id: crypto.randomUUID(), title: null, history: [] };
 }
 
-function getEmptyDemoThread() {
-  return {
-    id: crypto.randomUUID(),
-    title: null,
-    history: [],
-  };
-}
-
 function loadThreadState(storageKey, createFallbackThread) {
   if (typeof window === "undefined") {
     const thread = createFallbackThread();
@@ -339,7 +331,7 @@ function App() {
         </div>
 
         <div className="input-area">
-          {!backendReady && !demoMode && (
+          {!backendReady && (
             <div className="connecting-banner">
               <span className="typing-dot" />
               <span className="typing-dot" />
